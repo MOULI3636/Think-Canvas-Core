@@ -10,9 +10,25 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+const defaultClientOrigin = 'http://localhost:3000';
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || defaultClientOrigin)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOriginValidator = (origin, callback) => {
+  // Allow non-browser clients and server-to-server requests.
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+};
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: corsOriginValidator,
     credentials: true
   },
   maxHttpBufferSize: 15 * 1024 * 1024
@@ -20,7 +36,7 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: corsOriginValidator,
   credentials: true
 }));
 app.use(express.json());
@@ -32,10 +48,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
-    // secure: process.env.NODE_ENV === 'production',
-    secure: false,
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { ensureGuest } = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const clientRedirectUrl = process.env.CLIENT_URL || 'http://localhost:3000';
 
 const sanitizeUser = (user) => ({
   _id: user._id,
@@ -99,8 +100,8 @@ router.get('/google', passport.authenticate('google', {
 
 router.get('/google/callback',
   passport.authenticate('google', {
-    failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed`,
-    successRedirect: process.env.CLIENT_URL,
+    failureRedirect: `${clientRedirectUrl}/login?error=auth_failed`,
+    successRedirect: clientRedirectUrl,
     failureMessage: true
   })
 );
